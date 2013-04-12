@@ -72,10 +72,10 @@ int main (int argc, char ** argv)
                     execvp(argv[optind], args); 
                     return 0;
                 }
-                int return_code;
-                wait(&return_code);
+                int status;
+                wait(&status);
 
-                if (return_code == 0)
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
                     printf("%s%c", buffer, delimiter);
 
                 // move
