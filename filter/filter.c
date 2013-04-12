@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <stdio.h>
 
 int main (int argc, char ** argv)
 {
@@ -58,9 +57,8 @@ int main (int argc, char ** argv)
             // printf("[%i:%i]\n", i, buffer_pos);
             if (buffer[i] == delimiter)
             {
-                // do something
+                // execute
                 buffer[i] = 0;
-                // printf("[%s]\n", buffer);
                 args[last_arg - optind] = buffer;
 
                 if (fork() == 0)
@@ -75,8 +73,13 @@ int main (int argc, char ** argv)
                 int status;
                 wait(&status);
 
+                // print
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-                    printf("%s%c", buffer, delimiter);
+                {
+                    int written = 0;
+                    buffer[i] = delimiter;
+                    while ((written += write(1, buffer + written, i + 1 - written)) < i + 1);
+                }
 
                 // move
                 memmove(buffer, buffer + i + 1, buffer_pos + read_length - i);
@@ -85,7 +88,6 @@ int main (int argc, char ** argv)
             }
         }
         buffer_pos += read_length;
-        // printf("(%i)\n", buffer_pos);
     }
 
     free(buffer);
