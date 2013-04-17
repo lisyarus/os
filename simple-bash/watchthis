@@ -1,0 +1,13 @@
+#!/bin/bash
+
+to_execute="${*:2}"
+old_output=
+
+while :; do
+    new_output=`${to_execute}`
+    if [ -n "${old_output}" ]; then
+        diff -u <(echo "${old_output}") <(echo "${new_output}")
+    fi
+    old_output="${new_output}"
+    sleep "$1" 
+done
