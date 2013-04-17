@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [[ $# < 2 ]]; then
+    echo "Usage: $0 sleep-interval command [arguments...]"
+    exit 0
+fi
+
 to_execute="${*:2}"
 old_output=
 
