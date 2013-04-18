@@ -2,23 +2,16 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 void full_write (int fd, char * buffer, int size)
 {
-    //printf("Need to write %i\n", size);
     int written;
-    for (written = 0; (written += write(fd, buffer + written, size - written)) < size;)
-    {
-        //printf("[%i]: %i written\n", fd, written);
-    }
+    for (written = 0; (written += write(fd, buffer + written, size - written)) < size;);
 }
 
 void write_to_file (const char * filename, char * buffer, int size)
 {
-    //printf("Opening '%s'...\n", filename);
     int fd = open(filename, O_WRONLY);
-    //printf("Openned. Writing...\n");
     full_write(fd, buffer, size);
     close(fd);
 }
@@ -80,8 +73,6 @@ int main (int argc, char ** argv)
             close(pipefd[1]);
             wait(0);
             
-            //printf("Command finished\n");
-            
             int new_buffer_pos = 0;
             int read_count;
             while ((read_count = read(pipefd[0], new_buffer + new_buffer_pos, buffer_size - new_buffer_pos)) > 0)
@@ -96,23 +87,13 @@ int main (int argc, char ** argv)
             }
             close(pipefd[0]);
             
-            /*printf("Command output:\n");
-            printf("================\n");
-            full_write(1, new_buffer, new_buffer_pos);
-            printf("================\n");*/
-            
             if (old_buffer_pos > 0)
             {
-            
-                //printf("Forking...\n");
                 if (fork())
                 {
-                    //printf("Begin writing...\n");
                     write_to_file(fifo_old, old_buffer, old_buffer_pos);
                     write_to_file(fifo_new, new_buffer, new_buffer_pos);
-                    //printf("Written\n");
                     wait(0);
-                    //printf("diff finished\n");
                 }
                 else
                 {
