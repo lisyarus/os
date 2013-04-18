@@ -35,6 +35,8 @@ int run_pipe (pipe_t const & p)
             if (c < p.size() - 1) close(pipefds[c][1]);
             int return_status;
             wait(&return_status);
+            if (!return_status)
+                return return_status;
         }
         else
         {
@@ -55,6 +57,8 @@ int run_pipe (pipe_t const & p)
             execvp(args[0], args.data());
         }
     }
+
+    return 0;
 }
 
 int main ( )
