@@ -1,0 +1,173 @@
+// Usefull types
+
+Buffer = {
+    Pointer data
+    Interger size
+}
+
+// Syscall arguments
+
+ReadArgs = {
+    Integer fd
+    Buffer buffer
+}
+
+WriteArgs = {
+    Integer fd
+    Buffer buffer
+}
+
+DeviceReadArgs = {
+    Integer sessionId
+}
+
+DeviceWriteArgs = {
+    Integer sessionId
+}
+
+OpenArgs = {
+    String filename
+    FileMode mode
+}
+
+CloseArgs = {
+    Integer fd
+}
+
+AsyncCopyArgs = {
+    Integer srcFd, dstFd
+    Integer size
+}
+
+AsuncCopyJoinArgs = {
+    Integer sessionId
+}
+
+type SyscallArgs = ReadArgs | WriteArgs | DeviceReadArgs | DeviceWriteArgs | OpenArgs | CloseArgs | AsyncCopyArgs | AsyncCopyJoinArgs
+
+// Kernel structs
+
+type FdInfo = {
+    FileMode mode
+    VeryVeryLongInteger seekPos
+}
+
+type FdId = {
+    FdInfo fdInfo
+    Pointer data
+}
+
+type Process = {
+    function () : SyscallResult -> Context
+    Integer pid
+    Map<Integer, FdId> fdTable
+}
+
+type Context = {
+    SyscallTag syscallTag;
+    SyscallArgs: syscallArgs;
+    Process: continuation;
+}
+
+// Process wrappers
+
+type Runnable = {
+    Process process
+    SyscallResult syscallResult
+}
+
+type WaitingDevice = {
+    Process process
+    Integer sessionId
+}
+
+// Kernel
+
+kernel = function (Runnable main_process) { 
+    Device device
+    Map<String, Pointer> files
+
+    List<Runnable> runnable = [main_process]
+    List<WaitingDevice> waitingDevice = []
+    List<Integer> finishedSessions = []
+    
+    while !(runnable.empty() && waitingDevice.empty())
+
+        if (!runnable.empty())
+            Runnable toRun = runnable.front()
+            runnable.popFront()
+            Context context = toRun.process(toRUn.syscallResult)
+
+            switch (context.syscallTag) {
+
+            case ReadTag:
+                if (!context.continuadtion.fdTable.find(context.syscallArgs.fd))
+                    runnable.pushBack(context.continuation, 1)
+                else
+                    FdId fdId = context.continuation.fdTable[context.syscallArgs.fd]
+                    Integer sessionId = device.copy(fdId.data + fdId.fdInfo.seekPos, context.syscallArgs.buffer)
+                    fdId.fdInfo.seekPos += context.syscallArgs.buffer.size
+                    waitingDevice.pushBack(context.continuation, sessionId)
+
+            case WriteTag:
+                if (!context.continuation.fdTable.find(context.syscallArgs.fd))
+                    runnable.pushBack(context.continuation, 1)
+                else
+                    FdId fdId = context.continuation.fdTable[context.syscallArgs.fd]
+                    Integer sessionId = device.copy(context.syscallArgs.buffer, fdId.data + fdId.fdInfo.seekPos)
+                    fdId.fdInfo.seekPos += context.syscallArgs.buffer.size
+                    waitingDevice.pushBack(context.continuation, sessionId)
+
+            case DeviceTag:
+                if (WaitingDevice wd = waitingDevice.find(lambda (WaitingDevice wd) { return wd.sessionId == context.syscallArgs.sessionId }))
+                    waitingDevice.remove(wd)
+                else
+                    finishedSession.pushBack(context.syscallArgs.sessionId) 
+                runnable.pushBack(wd.process, 0)
+
+            case OpenTag:
+                if (context.syscallArgs.mode == FileModeRead
+                && !files.find(context.syscallArgs.filename)
+                    runnable.pushBack(context.continuation, -1)
+                else
+                    Pointer data = files[context.syscallArgs.filename] 
+                    Integer fd = context.continuation.fdTable.generateFd()
+                    context.continuation.fdTable[fd] = FdId(FdInfo(context.syscallArgs.mode, 0), data)
+                    runnable.pushBack(context.continuation, fd)
+
+            case CloseTag:
+                if (!context.continuation.fdTable.find(context.syscallArgs.fd))
+                    runnable.pushBack(context.continuation, 1)
+                else
+                    context.continuation.fdTable.remove(context.syscallArgs.fd)
+                    runnable.pushBack(context.continuation, 0)
+
+            case AsyncCopyTag:
+                Boolean check = context.continutaion.fdTable.find(context.syscallArgs.srcFd)
+                             && context.continuation.fdTable[context.syscallArgs.srcFd].fdInfo.mode contains FileModeRead
+                             && context.continutaion.fdTable.find(context.syscallArgs.dstFd)
+                             && context.continutaion.fdTable[context.syscallArgs.dstFd].fdInfo.mode contains FileModeWrite
+
+                if (!check)
+                    runnable.pushBack(context.continuation, 1)
+
+                FdId srcId = context.continuation.fdTable[context.syscallArgs.srcFd]
+                FdIf dstId = context.continuation.fdTable[context.syscallArgs.dstId]
+
+                Integer sessionId = device.copy(srdId.data + srcId.fdInfo.seekPos, srdId, dstId.data + dstId.fdInfo.seekPos, context.syscallArgs.size)
+                srcId.fdInfo.seekPos += context.syscallArgs.size
+                dstId.fdInfo.seekPos += context.syscallArgs.size
+
+                runnable.pushBack(context.continuation, sessionId)
+
+            case AsyncCopyJoinTag:
+                if (finishedSessions.find(context.syscallArgs.sessionId))
+                    finishedSessions.remove(context.syscallArgs.sessionId)
+                    runnable.pushBack(context.continuation, 0)
+                else
+                    waitingDevice.pushBack(context.continuation, context.syscallArgs.sessionId)
+
+                
+            }
+
+}
