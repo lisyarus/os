@@ -22,8 +22,7 @@ int _get_int (char * str)
             result = result * 10 + ((*str++) - '0');
         else
         {
-            result = -1;
-            return;
+            return -1;
         }
     return result;
 }
@@ -46,6 +45,7 @@ int main (int argc, char ** argv)
         _full_write(1, usage_str, _strlen(usage_str));
         return -1;
     }
+    
     char * wrong_argument = "Second argument should be a positive number\n";
     int buffer_size = _get_int(argv[1]);
     if (buffer_size <= 0)
@@ -53,23 +53,29 @@ int main (int argc, char ** argv)
         _full_write(1, wrong_argument, _strlen(wrong_argument));
         return -1;
     }
+    
     ++buffer_size;
     char * buffer = malloc(buffer_size);
     int length = 0;
     int begin = 0;
     int end = 0;
-    int state = 0; // 0 - normal, 1 - skip
+
+    typedef enum {
+        normal, skip
+    } state_t;
+    state_t state = normal;
+    
     int quit = 0;
 
     while (!quit)
     {
         if (length == buffer_size)
         {
-            state = 1;
+            state = skip;
             end = 0;
         }
         int block;
-        if (state == 0)
+        if (state == normal)
             if (end >= begin)
                 block = read(0, buffer + end, buffer_size - end);
             else
@@ -96,7 +102,7 @@ int main (int argc, char ** argv)
         {
             if (buffer[end + i] == '\n')
             {
-                if (state == 0)
+                if (state == normal)
                 {
                     // write, including current '\n' symbol
                     int count = 0;
@@ -117,7 +123,7 @@ int main (int argc, char ** argv)
                 {
                     begin = i + 1;
                     length = - i - 1;
-                    state = 0;
+                    state = normal;
                 }
             }
         }
