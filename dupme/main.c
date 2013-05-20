@@ -1,31 +1,7 @@
 #include <unistd.h>
-#include <stdio.h> // debug
+#include <stdio.h>
 #include <stdlib.h>
-
-int _strlen (char * str)
-{
-    char * temp = str;
-    while (*temp++);
-    return temp - str;
-}
-
-int _is_number (char c)
-{
-    return (c >= '0') && (c <= '9');
-}
-
-int _get_int (char * str)
-{
-    int result = 0;
-    while (*str)
-        if (_is_number(*str))
-            result = result * 10 + ((*str++) - '0');
-        else
-        {
-            return -1;
-        }
-    return result;
-}
+#include <string.h>
 
 void _full_write (int fd, char * buffer, int len)
 {
@@ -42,15 +18,15 @@ int main (int argc, char ** argv)
     char * usage_str = "Usage: ./main <buffer_size>\n";
     if (argc != 2)
     {
-        _full_write(1, usage_str, _strlen(usage_str));
+        _full_write(1, usage_str, strlen(usage_str));
         return -1;
     }
     
     char * wrong_argument = "Second argument should be a positive number\n";
-    int buffer_size = _get_int(argv[1]);
+    int buffer_size = atoi(argv[1]);
     if (buffer_size <= 0)
     {
-        _full_write(1, wrong_argument, _strlen(wrong_argument));
+        _full_write(1, wrong_argument, strlen(wrong_argument));
         return -1;
     }
     
@@ -94,7 +70,7 @@ int main (int argc, char ** argv)
         if (block == -1)
         {
             char * read_error = "An error occured while reading\n";
-            _full_write(1, read_error, _strlen(read_error));
+            _full_write(1, read_error, strlen(read_error));
         }
 
         int i;
