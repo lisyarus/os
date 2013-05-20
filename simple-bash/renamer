@@ -4,9 +4,7 @@ for file; do
     if [ -f ${file} ]; then
         name=`basename ${file}`
         dir=`dirname ${file}` 
-        echo ${name}
-        read new_name
+        read -i "${name}" -e new_name
         mv ${file} ${dir}/${new_name}
-        echo
     fi
 done
