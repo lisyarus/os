@@ -2,6 +2,9 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
 
 void full_write (int fd, char * buffer, int size)
 {
