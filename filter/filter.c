@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 int main (int argc, char ** argv)
 {
@@ -54,7 +55,6 @@ int main (int argc, char ** argv)
 
         for (i = buffer_pos; i < buffer_pos + read_length; ++i)
         {
-            // printf("[%i:%i]\n", i, buffer_pos);
             if (buffer[i] == delimiter)
             {
                 // execute
