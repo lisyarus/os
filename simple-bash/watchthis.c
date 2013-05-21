@@ -5,16 +5,64 @@
 #include <stdio.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <string.h>
 
-void full_write (int fd, char * buffer, int size)
+void full_write (int fd, const char * buffer, int len)
 {
-    int written;
-    for (written = 0; (written += write(fd, buffer + written, size - written)) < size;);
+    while (len != 0)
+    {
+        int k = write(fd, buffer, len);
+        if (k == 0) exit(1);
+        len -= k;
+        buffer += k;
+    }
+}
+
+int safe_read (int fd, void * buf, int count)
+{
+    const char * error_msg = "Error while reading\n";
+    int result = read(fd, buf, count);
+    if (result == -1)
+    {
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
+    return result;
+}
+
+char * safe_malloc (int size)
+{
+    const char * error_msg = "Error while allocation memory\n";
+    char * result = (char *)malloc(size);
+    if (result == NULL)
+    {
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
+    return result;
+}
+
+char * safe_realloc (void * buf, int size)
+{
+    const char * error_msg = "Error while reallocation memory\n";
+    char * result = (char *)realloc(buf, size);
+    if (result == NULL)
+    {
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
+    return result;
 }
 
 void write_to_file (const char * filename, char * buffer, int size)
 {
     int fd = open(filename, O_WRONLY);
+    if (fd == -1)
+    {
+        const char * error_msg = "Could not open file\n";
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
     full_write(fd, buffer, size);
     close(fd);
 }
@@ -65,8 +113,8 @@ int main (int argc, char ** argv)
     
     int buffer_size = 16;
     int old_buffer_pos = 0;
-    char * old_buffer = (char *) malloc(buffer_size);
-    char * new_buffer = (char *) malloc(buffer_size);
+    char * old_buffer = (char *) safe_malloc(buffer_size);
+    char * new_buffer = (char *) safe_malloc(buffer_size);
     
     while (1)
     {
@@ -78,14 +126,14 @@ int main (int argc, char ** argv)
             
             int new_buffer_pos = 0;
             int read_count;
-            while ((read_count = read(pipefd[0], new_buffer + new_buffer_pos, buffer_size - new_buffer_pos)) > 0)
+            while ((read_count = safe_read(pipefd[0], new_buffer + new_buffer_pos, buffer_size - new_buffer_pos)) > 0)
             {
                 new_buffer_pos += read_count;
                 if (new_buffer_pos == buffer_size)
                 {
                     buffer_size *= 2;
-                    old_buffer = (char *) realloc(old_buffer, buffer_size);
-                    new_buffer = (char *) realloc(new_buffer, buffer_size);
+                    old_buffer = (char *) safe_realloc(old_buffer, buffer_size);
+                    new_buffer = (char *) safe_realloc(new_buffer, buffer_size);
                 }
             }
             close(pipefd[0]);
