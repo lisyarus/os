@@ -4,6 +4,41 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
+void full_write (int fd, const char * buffer, int len)
+{
+    while (len != 0)
+    {
+        int k = write(fd, buffer, len);
+        if (k == 0) exit(1);
+        len -= k;
+        buffer += k;
+    }
+}
+
+int safe_read (int fd, void * buf, int count)
+{
+    const char * error_msg = "Error while reading\n";
+    int result = read(fd, buf, count);
+    if (result == -1)
+    {
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
+    return result;
+}
+
+void * safe_malloc (int size)
+{
+    const char * error_msg = "Error while allocation memory\n";
+    void * result = malloc(size);
+    if (result == NULL)
+    {
+        full_write(1, error_msg, strlen(error_msg));
+        exit(1);
+    }
+    return result;
+}
+
 int main (int argc, char ** argv)
 {
     char delimiter = '\n';
@@ -27,13 +62,13 @@ int main (int argc, char ** argv)
     int last_arg;
     for (last_arg = optind; argv[last_arg] != 0; ++last_arg);
 
-    char ** args = (char **)malloc(sizeof(char *) * (last_arg - optind + 2));
+    char ** args = (char **)safe_malloc(sizeof(char *) * (last_arg - optind + 2));
     int a;
     for (a = 0; a < last_arg - optind; ++a)
         args[a] = argv[optind + a];
     args[last_arg - optind + 1] = 0;
 
-    char * buffer = malloc(buffer_size + 1);
+    char * buffer = safe_malloc(buffer_size + 1);
 
     int buffer_pos = 0; 
     int read_length = 0;
@@ -42,7 +77,7 @@ int main (int argc, char ** argv)
 
     while (quit != 1)
     { 
-        read_length = read(0, buffer + buffer_pos, buffer_size + 1 - buffer_pos);
+        read_length = safe_read(0, buffer + buffer_pos, buffer_size + 1 - buffer_pos);
 
         if (read_length == 0)
         {
@@ -64,6 +99,12 @@ int main (int argc, char ** argv)
                 if (fork() == 0)
                 {
                     int fd = open("/dev/null", O_WRONLY);
+                    if (fd == -1)
+                    {
+                        const char * error_msg = "Could not open /dev/null\n";
+                        full_write(1, error_msg, strlen(error_msg));
+                        exit(1);
+                    }
                     dup2(fd, STDOUT_FILENO);
                     dup2(fd, STDERR_FILENO);
                     close(fd);
@@ -75,11 +116,7 @@ int main (int argc, char ** argv)
 
                 // print
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-                {
-                    int written = 0;
-                    buffer[i] = delimiter;
-                    while ((written += write(1, buffer + written, i + 1 - written)) < i + 1);
-                }
+                    full_write(1, buffer, i + 1);
 
                 // move
                 memmove(buffer, buffer + i + 1, buffer_pos + read_length - i);
