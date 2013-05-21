@@ -29,7 +29,7 @@ int safe_read (int fd, void * buf, int count)
 
 void * safe_malloc (int size)
 {
-    const char * error_msg = "Error while allocation memory\n";
+    const char * error_msg = "Error while allocating memory\n";
     void * result = malloc(size);
     if (result == NULL)
     {

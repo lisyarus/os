@@ -32,7 +32,7 @@ int safe_read (int fd, void * buf, int count)
 
 char * safe_malloc (int size)
 {
-    const char * error_msg = "Error while allocation memory\n";
+    const char * error_msg = "Error while allocating memory\n";
     char * result = (char *)malloc(size);
     if (result == NULL)
     {
@@ -44,7 +44,7 @@ char * safe_malloc (int size)
 
 char * safe_realloc (void * buf, int size)
 {
-    const char * error_msg = "Error while reallocation memory\n";
+    const char * error_msg = "Error while reallocating memory\n";
     char * result = (char *)realloc(buf, size);
     if (result == NULL)
     {
