@@ -35,7 +35,7 @@ int main ( )
     {
         sfd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
         if (sfd == -1) continue;
-        if (bind(sfd, ai->ai_addr, ai->ai_addrlen) == 0) break;
+        if (connect(sfd, ai->ai_addr, ai->ai_addrlen) == 0) break;
         close(sfd);
     }
     if (ai == nullptr) 
@@ -44,43 +44,12 @@ int main ( )
         return 1;
     }
 
+    char buffer[512];
+    while (read(sfd, buffer, 512) != 0)
+    {
+        std::cout << buffer;
+    }
+
     freeaddrinfo(result);
 
-    {
-        int opt = 1;
-        if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &opt, 4) != 0)
-        {
-            std::cerr << "Failed to set socket option" << std::endl;
-            return 0;
-        }
-    }
-
-    if (listen(sfd, 5) != 0)
-    {
-        std::cerr << "Failed to listen" << std::endl;
-        return 0;
-    }
-   
-    while (true)
-    {
-        int sd;
-        if ((sd = accept(sfd, nullptr, nullptr)) == -1)
-            continue;
-
-        if (fork())
-        {
-            // parent
-            close(sd);
-        }
-        else
-        {
-            // child
-            close(sfd);
-            dup2(sd, 0);
-            dup2(sd, 1);
-            dup2(sd, 2);
-            std::cout << "Hello, %username%!" << std::endl;
-            return 0;
-        }
-    }
 }
