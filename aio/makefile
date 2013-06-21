@@ -1,2 +1,2 @@
 test: autofd.h epollfd.h test.cpp
-	g++ -std=c++11 test.cpp -o test
+	g++ -Wall -std=c++11 -g test.cpp -o test

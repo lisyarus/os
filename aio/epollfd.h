@@ -27,7 +27,7 @@ struct epollfd
         auto cont_it = _find_cont(fd, what);
         auto event_it = _find_event(fd);
 
-        if (cont_it.first == _conts.end())
+        if (cont_it.first == _conts.end() || cont_it.second == cont_it.first->second.end())
         {
             _conts[fd][what].cont = cont;
             _conts[fd][what].cont_err = cont_err;
@@ -44,12 +44,21 @@ struct epollfd
             event.events = what;
             event.data.fd = fd;
             _events.push_back(event);
-            epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &_events.back());
+            if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, fd, &_events.back()))
+            {
+                _events.pop_back();
+                perror("hmmm");
+                throw std::runtime_error("epoll add failed");
+            }
         }
         else
         {
             event_it->events |= what;
-            epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &(*event_it));
+            if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, fd, &(*event_it)))
+            {
+                event_it->events ^= what;
+                throw std::runtime_error("epoll modify failed");
+            }
         }
     }
 
@@ -58,16 +67,20 @@ struct epollfd
         auto cont_it = _find_cont(fd, what);
         if (cont_it.first != _conts.end())
         {
-            _conts.erase(cont_it.first);
-            if (_conts.count(fd) == 0)
-                _conts.erase(fd);
             auto event_it = _find_event(fd);
             event_it->events &= ~what;
             if (event_it->events == 0)
             {
-                epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &(*event_it));
+                if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, fd, &(*event_it)))
+                {
+                    event_it->events |= what;
+                    throw std::runtime_error("epoll delete failed");
+                }
                 _events.erase(event_it);
             }
+            _conts.erase(cont_it.first);
+            if (_conts.count(fd) == 0)
+                _conts.erase(fd);
         }
     }
 
@@ -75,12 +88,20 @@ struct epollfd
     {
         std::vector<epoll_event> events(_max_size);
         int count = epoll_wait(_epollfd, events.data(), _max_size, -1);
+        if (count == -1)
+            throw std::runtime_error("epoll wait failed");
         for (int e = 0; e < count; ++e)
         {
             epoll_event & event = events[e];
-            for (auto inner_it = _conts[event.data.fd].begin(); inner_it != _conts[event.data.fd].end();)
+            if ((event.events & EPOLLERR) != 0)
             {
-                if (inner_it->first & event.events != 0)
+                for (auto c : _conts[event.data.fd])
+                    c.second.cont_err();
+                _conts.erase(event.data.fd);
+            }
+            else for (auto inner_it = _conts[event.data.fd].begin(); inner_it != _conts[event.data.fd].end();)
+            {
+                if ((inner_it->first & event.events) != 0)
                 {
                     auto cont = inner_it->second.cont;
                     auto next_it = std::next(inner_it);
