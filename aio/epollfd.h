@@ -1,3 +1,5 @@
+#pragma once
+
 #include "autofd.h"
 
 #include <functional>
@@ -86,6 +88,7 @@ struct epollfd
 
     void cycle ( )
     {
+        if (_events.size() == 0) return;
         std::vector<epoll_event> events(_max_size);
         int count = epoll_wait(_epollfd, events.data(), _max_size, -1);
         if (count == -1)
